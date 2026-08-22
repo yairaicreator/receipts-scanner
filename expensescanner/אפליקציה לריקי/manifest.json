@@ -1,0 +1,9 @@
+{
+  "name": "Expense Scanner",
+  "short_name": "Expenses",
+  "start_url": "./Expense Scanner.dc.html",
+  "display": "standalone",
+  "background_color": "#f3f2f2",
+  "theme_color": "#ec3013",
+  "icons": []
+}

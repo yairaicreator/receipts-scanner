@@ -8,6 +8,6 @@ export default async function handler(req, res) {
   try {
     sendJson(res, 200, { people: await listPeople() });
   } catch (err) {
-    fail(res, err, 'Could not load the expense records.');
+    fail(res, err, 'לא ניתן היה לטעון את רשומות ההוצאות.');
   }
 }

@@ -1,137 +1,103 @@
-/* App-level layout. Every value here comes from a Modernist token — the
-   design system's own rule (readme.md): never hard-code a hex, font or px
-   the tokens already carry. The few raw px left are the ones the prototype
-   itself carried (icon sizes, the 4px category strip, the 430px phone
-   column). */
+/* App-level layout and the dark Hebrew/RTL theme from the second design
+   round. The app is now committed to this one look (a phone PWA, not a
+   dual-theme surface), so these are literal values rather than a light/dark
+   pair — matching the design bundle's own hardcoded palette. `--color-accent`
+   and the heading/body fonts still come from the Modernist tokens; the rest
+   of this palette is new. */
+
+:root {
+  --rtl-bg: #0b0a09;
+  --rtl-panel: #1a1716;
+  --rtl-panel-2: #141110;
+  --rtl-border: #2b2725;
+  --rtl-border-2: #3a3533;
+  --rtl-text: #f3f2f2;
+  --rtl-muted: #8f8a88;
+  --rtl-faint: #605d5d;
+  --rtl-placeholder: #6e6867;
+}
 
 body {
   margin: 0;
-  background: var(--color-neutral-300);
+  background: var(--rtl-bg);
   font-family: var(--font-body);
 }
-::selection { background: var(--color-accent-200); }
-a { color: var(--color-accent-700); }
-a:hover { color: var(--color-accent-500); }
+::selection { background: var(--color-accent-200); color: #000; }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-400); }
 input, select { font-family: var(--font-body); }
+
+@keyframes sweep { 0% { transform: translateX(100%); } 100% { transform: translateX(-400%); } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .rise-in { animation: none !important; }
+  .sweep-bar { animation: none !important; }
+}
 
 /* ── The phone column ───────────────────────────────────────────────── */
 .app-shell {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  background: var(--color-bg);
+  background: var(--rtl-bg);
+  color: var(--rtl-text);
   display: flex;
   flex-direction: column;
   position: relative;
   box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
-/* ── Headers ────────────────────────────────────────────────────────── */
-.home-header {
-  background: var(--color-accent-500);
-  border-bottom: 2px solid var(--color-divider);
-  padding: var(--space-4);
+/* ── Dark variants of the Modernist form/button classes ───────────────
+   The design system's own .input/.btn-secondary/.tag-outline/.btn-icon
+   assume a light ground; the app now runs dark throughout, so these
+   override the surface colors the same way the design bundle's own
+   <style> block did. */
+.app-shell .input {
+  background: var(--rtl-panel-2);
+  color: var(--rtl-text);
+  border-color: var(--rtl-border-2);
 }
-.home-header .nav-brand { color: #fff; }
-.home-header-sub {
-  font-size: 12px;
-  color: #fff;
-  opacity: 0.85;
-  margin-top: 2px;
+.app-shell .input::placeholder { color: var(--rtl-placeholder); }
+.app-shell select.input option { background: var(--rtl-panel-2); color: var(--rtl-text); }
+.app-shell .field label { color: var(--rtl-muted); }
+.app-shell .btn-secondary {
+  background: transparent;
+  color: var(--rtl-text);
+  border-color: var(--rtl-border-2);
 }
-.sub-header {
-  border-bottom: 2px solid var(--color-divider);
-  padding: var(--space-4);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.sub-header-meta {
-  font-size: 12px;
-  color: var(--color-neutral-700);
-}
+.app-shell .btn-secondary:hover { background: var(--rtl-panel); }
+.app-shell .tag-outline { color: var(--rtl-text); border-color: var(--rtl-border-2); }
+.app-shell .tag-outline:hover { background: var(--rtl-panel); }
+.app-shell .btn-icon { color: var(--rtl-text); background: transparent; border-color: var(--rtl-border-2); }
+.app-shell .btn-icon:hover { background: var(--rtl-panel); }
 
-/* ── Scrolling body + sticky action bar ─────────────────────────────── */
-.screen-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
-}
-.screen-body.has-footer { padding-bottom: 96px; }
-.sticky-footer {
-  position: sticky;
-  bottom: 0;
-  padding: var(--space-4);
-  background: var(--color-bg);
-  border-top: 2px solid var(--color-divider);
-}
-.sticky-footer.stacked {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
+/* ── Rows that highlight on hover/press (person list, month-free now but
+   still used for the person rows and entry rows) ──────────────────────── */
+.hover-row { transition: background 0.15s; cursor: pointer; }
+.hover-row:hover { background: var(--rtl-panel); }
 
-/* ── Home: person cards ─────────────────────────────────────────────── */
-.person-card {
-  cursor: pointer;
-  margin-bottom: var(--space-3);
-  border-left: 6px solid var(--person-color, var(--color-accent));
-  text-align: left;
-  border-top: 0;
-  border-right: 0;
-  border-bottom: 0;
-  width: 100%;
-  font: inherit;
-  color: inherit;
-}
-.person-card:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.cat-strip {
-  display: flex;
-  height: 4px;
-  margin-top: var(--space-3);
-  gap: 1px;
-}
-.cat-strip > span { height: 4px; }
+.rise-in { animation: riseIn 0.28s ease both; }
 
-.empty-state {
-  text-align: center;
-  padding: var(--space-6) var(--space-4);
-  color: var(--color-neutral-700);
-}
-.empty-state svg {
-  display: inline-block;
-  color: var(--color-neutral-500);
-  margin-bottom: var(--space-3);
-}
-.empty-state-text { font-size: 14px; }
-
-/* ── Scan: capture ──────────────────────────────────────────────────── */
-.captured-photo {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  display: block;
-  /* the design system prints every content photograph in black and white */
-  filter: grayscale(1) contrast(1.08);
-}
-/* Stands in for the prototype's <image-slot>: same 220px rect, dashed ring,
+/* ── Scan: capture drop-zone ───────────────────────────────────────────
+   Stands in for the prototype's <image-slot>: same rect, dashed ring,
    icon-over-caption empty state, click-or-drop behaviour. */
 .drop-zone {
   position: relative;
   width: 100%;
-  height: 220px;
+  height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  gap: 10px;
+  padding: 12px;
   text-align: center;
   cursor: pointer;
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: var(--rtl-panel);
   border: 0;
   font: inherit;
-  color: inherit;
+  color: var(--rtl-muted);
   font-size: 13px;
 }
 .drop-zone::after {
@@ -142,162 +108,36 @@ input, select { font-family: var(--font-body); }
   border: 1.5px dashed currentColor;
   opacity: 0.35;
 }
-.drop-zone[data-over]::after {
-  border-color: var(--color-accent);
-  opacity: 1;
-}
-.drop-zone[data-over] { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.drop-zone svg { opacity: 0.45; }
-.drop-zone-cap { max-width: 90%; font-weight: 500; letter-spacing: 0.01em; opacity: 0.75; }
+.drop-zone[data-over]::after { border-color: var(--color-accent); opacity: 1; }
+.drop-zone[data-over] { background: color-mix(in srgb, var(--color-accent) 12%, var(--rtl-panel)); }
+.drop-zone svg { opacity: 0.6; }
+.drop-zone-cap { max-width: 90%; font-weight: 500; letter-spacing: 0.01em; }
 
-.capture-actions { margin-top: var(--space-4); }
-
-/* ── Scan: processing ───────────────────────────────────────────────── */
-.processing {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-6) 0;
-}
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid var(--color-neutral-300);
-  border-top-color: var(--color-accent-500);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-.processing-label { font-size: 14px; color: var(--color-neutral-700); }
-
-/* ── Scan: review form ──────────────────────────────────────────────── */
-.field { margin-bottom: var(--space-4); }
-/* The prototype asked for a --space-5 token the system doesn't define, so the
-   last field collapsed to a 0 margin. Fall back to the next step down. */
-.field.last { margin-bottom: var(--space-4); }
-.name-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: -8px 0 var(--space-4);
-}
-.name-suggestions .tag {
-  cursor: pointer;
-  background: none;
-  font: inherit;
-  font-size: 11px;
-}
-.form-error {
-  font-size: 13px;
-  color: var(--color-accent-700);
-  margin-bottom: var(--space-3);
-}
-
-/* ── Person: stats and chart ────────────────────────────────────────── */
-.stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-.stat-card { border-left: 6px solid var(--person-color, var(--color-accent)); }
-.stat-card .card-title {
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.section-label {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-neutral-700);
-  margin-bottom: var(--space-3);
-}
-.bar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-.bar-label {
-  width: 88px;
-  font-size: 12px;
-  color: var(--color-text);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.bar-track {
-  flex: 1;
-  height: 10px;
-  background: var(--color-neutral-200);
-}
-.bar-fill { height: 10px; }
-.bar-value {
-  width: 70px;
-  text-align: right;
-  font-size: 12px;
-  color: var(--color-neutral-800);
-  flex-shrink: 0;
-}
-.line-chart {
+.captured-photo {
   width: 100%;
-  height: 120px;
+  height: 260px;
+  object-fit: cover;
   display: block;
-  margin-bottom: var(--space-2);
+  filter: grayscale(1);
 }
-.chart-note {
-  font-size: 11px;
-  color: var(--color-neutral-700);
-  margin-bottom: var(--space-4);
-}
-.chart-empty {
-  font-size: 13px;
-  color: var(--color-neutral-700);
-  margin-bottom: var(--space-4);
-}
-
-/* ── Person: entries table ──────────────────────────────────────────── */
-.entries-table { width: 100%; margin-bottom: var(--space-4); }
-.entries-table th.right, .entries-table td.right { text-align: right; }
-/* The date and the cost each have to stay on one line; the vendor is the
-   column that gives when the phone is narrow. */
-.entries-table td:first-child,
-.entries-table td.right { white-space: nowrap; }
-.entries-table td, .entries-table th { padding-inline: var(--space-1); }
-.entries-table td:first-child, .entries-table th:first-child { padding-left: 0; }
-.entries-table .tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: color-mix(in srgb, var(--cat-color) 13%, transparent);
-  color: var(--cat-color);
-  border: 1px solid color-mix(in srgb, var(--cat-color) 33%, transparent);
-}
-.delete-btn { color: var(--color-neutral-700); }
-.delete-btn:hover { color: var(--color-accent); }
 
 /* ── Status banner (network / API failures) ─────────────────────────── */
 .banner {
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 14px;
   font-size: 13px;
-  background: var(--color-accent-100);
-  color: var(--color-accent-800);
-  border-bottom: 2px solid var(--color-divider);
+  background: color-mix(in srgb, var(--color-accent) 20%, var(--rtl-bg));
+  color: #fff;
+  border-bottom: 2px solid var(--rtl-border);
+  cursor: pointer;
 }
 .loading-screen {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6);
-  color: var(--color-neutral-700);
+  gap: 14px;
+  padding: 24px;
+  color: var(--rtl-muted);
   font-size: 14px;
 }

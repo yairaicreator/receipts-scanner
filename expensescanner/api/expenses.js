@@ -11,22 +11,25 @@ import { fail, methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
 function validate(body) {
   const personName = String(body.personName || '').trim();
-  if (!personName) return { error: 'Who made this purchase? A name is required.' };
-  if (personName.length > 120) return { error: 'That name is too long.' };
+  if (!personName) return { error: 'מי ביצע את הרכישה? יש להזין שם.' };
+  if (personName.length > 120) return { error: 'השם ארוך מדי.' };
 
   const amount = Number(body.amount);
-  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Enter a cost greater than zero.' };
-  if (amount > 1e9) return { error: 'That cost is out of range.' };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'יש להזין עלות גדולה מאפס.' };
+  if (amount > 1e9) return { error: 'העלות חורגת מהטווח האפשרי.' };
 
   const date = String(body.date || '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'Enter a valid date.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'יש להזין תאריך תקין.' };
 
   const category = CATEGORIES.includes(body.category) ? body.category : CATEGORIES[0];
   const vendor = String(body.vendor || '').trim().slice(0, 200) || '—';
+  // Not user-editable — carried through only because the AI reasoned from it
+  // to pick the category above.
+  const subject = String(body.subject || '').trim().slice(0, 200);
 
   return {
     personName,
-    expense: { id: newId(), date, category, amount: Math.round(amount * 100) / 100, vendor },
+    expense: { id: newId(), date, category, amount: Math.round(amount * 100) / 100, vendor, subject },
   };
 }
 
@@ -44,14 +47,14 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       const id = new URL(req.url, 'http://localhost').searchParams.get('id');
-      if (!id) return sendJson(res, 400, { error: 'Missing the expense id.' });
+      if (!id) return sendJson(res, 400, { error: 'חסר מזהה הקבלה.' });
       const removed = await deleteExpense(id);
-      if (!removed) return sendJson(res, 404, { error: 'That receipt no longer exists.' });
+      if (!removed) return sendJson(res, 404, { error: 'הקבלה הזו כבר לא קיימת.' });
       return sendJson(res, 200, { people: await listPeople() });
     }
 
     return methodNotAllowed(res, ['POST', 'DELETE']);
   } catch (err) {
-    fail(res, err, 'Could not save the change. Please try again.');
+    fail(res, err, 'לא ניתן היה לשמור את השינוי. נסו שוב.');
   }
 }

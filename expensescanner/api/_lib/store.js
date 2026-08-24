@@ -62,6 +62,9 @@ async function ensureSchema() {
           created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
         );
         CREATE INDEX IF NOT EXISTS expenses_person_idx ON expenses (person_id);
+        -- Added after the first deployment — IF NOT EXISTS so this stays
+        -- safe to run against a database that already has the table.
+        ALTER TABLE expenses ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT '';
       `);
     })().catch((err) => {
       schemaReady = null; // let the next request retry a transient failure
@@ -86,6 +89,9 @@ function rowsToPeople(peopleRows, expenseRows) {
       category: e.category,
       amount: Number(e.amount),
       vendor: e.vendor,
+      // Not shown in the app — kept only because it's what the AI used to
+      // pick the category, in case that reasoning is worth surfacing later.
+      subject: e.subject || '',
     });
   }
   return [...byId.values()];
@@ -97,7 +103,7 @@ const dbStore = {
     const pool = await getPool();
     const [people, expenses] = await Promise.all([
       pool.query('SELECT id, name FROM people ORDER BY created_at ASC'),
-      pool.query('SELECT id, person_id, date, category, amount, vendor FROM expenses ORDER BY date ASC, created_at ASC'),
+      pool.query('SELECT id, person_id, date, category, amount, vendor, subject FROM expenses ORDER BY date ASC, created_at ASC'),
     ]);
     return rowsToPeople(people.rows, expenses.rows);
   },
@@ -119,9 +125,9 @@ const dbStore = {
       );
       const personId = upsert.rows[0].id;
       await client.query(
-        `INSERT INTO expenses (id, person_id, date, category, amount, vendor)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [expense.id, personId, expense.date, expense.category, expense.amount, expense.vendor],
+        `INSERT INTO expenses (id, person_id, date, category, amount, vendor, subject)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [expense.id, personId, expense.date, expense.category, expense.amount, expense.vendor, expense.subject || ''],
       );
       await client.query('COMMIT');
       return personId;

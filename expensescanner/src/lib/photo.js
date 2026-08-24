@@ -9,7 +9,7 @@ import { MAX_PHOTO_DIMENSION } from '../config.js';
 export function toScaledDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that photo.'));
+    reader.onerror = () => reject(new Error('לא ניתן היה לקרוא את התמונה.'));
     reader.onload = () => {
       const img = new Image();
       // If decoding fails, send the original bytes rather than nothing.

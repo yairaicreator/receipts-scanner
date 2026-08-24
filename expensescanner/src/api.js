@@ -5,7 +5,7 @@ async function request(url, options) {
   const contentType = res.headers.get('content-type') || '';
   const body = contentType.includes('application/json') ? await res.json() : null;
   if (!res.ok) {
-    throw new Error(body?.error || `Request failed (${res.status}).`);
+    throw new Error(body?.error || `הבקשה נכשלה (${res.status}).`);
   }
   return body;
 }
@@ -43,7 +43,7 @@ export async function fetchExportFile(personId) {
   const res = await fetch(`/api/export?personId=${encodeURIComponent(personId)}`);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.error || 'Could not build the Excel file.');
+    throw new Error(body?.error || 'לא ניתן היה ליצור את קובץ האקסל.');
   }
   const blob = await res.blob();
   const name = filenameFrom(res.headers.get('content-disposition'));

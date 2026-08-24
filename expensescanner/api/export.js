@@ -172,10 +172,10 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res, ['GET']);
   try {
     const personId = new URL(req.url, 'http://localhost').searchParams.get('personId');
-    if (!personId) return sendJson(res, 400, { error: 'Missing personId.' });
+    if (!personId) return sendJson(res, 400, { error: 'חסר מזהה האדם.' });
 
     const person = await getPerson(personId);
-    if (!person) return sendJson(res, 404, { error: 'No such person.' });
+    if (!person) return sendJson(res, 404, { error: 'לא נמצא אדם כזה.' });
 
     const buffer = await buildWorkbook(person).xlsx.writeBuffer();
     res.status(200);
@@ -184,6 +184,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.send(Buffer.from(buffer));
   } catch (err) {
-    fail(res, err, 'Could not build the Excel file.');
+    fail(res, err, 'לא ניתן היה ליצור את קובץ האקסל.');
   }
 }

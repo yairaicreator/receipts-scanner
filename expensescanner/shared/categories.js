@@ -34,7 +34,19 @@ export const CATEGORY_ICON = {
   Other: 'MoreHorizontal',
 };
 
-export const PERSON_COLORS = ['#ec3013', '#2f6fb0', '#1d7a5f', '#c98a12', '#7a4fc9', '#c9407a'];
+// The app's UI is Hebrew (per the redesign); the category KEYS stay the
+// English identifiers above — they're what's stored in the database and
+// what the Excel column map keys on — this is only the on-screen label.
+// These are the same six words already used as the Excel headers, so the
+// dropdown, the tags, and the exported sheet all read as one vocabulary.
+export const CATEGORY_LABEL_HE = {
+  Fuel: 'דלק',
+  Taxi: 'מוניות',
+  Parking: 'חניה',
+  Hosting: 'אירוח',
+  Catering: 'כיבוד',
+  Other: 'שונות',
+};
 
 /** Repeat scans must land on the same person — match on a normalized name. */
 export function normalizeName(name) {

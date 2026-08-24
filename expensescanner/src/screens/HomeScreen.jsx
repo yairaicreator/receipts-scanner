@@ -15,6 +15,9 @@ export default function HomeScreen({ userName, people, peopleCount, receiptCount
         <div style={{ fontSize: 13, opacity: 0.85, marginTop: 12, maxWidth: '26ch' }}>
           שלום {userName} — צלמו קבלה והיא תתויק אוטומטית.
         </div>
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, maxWidth: '26ch' }}>
+          לא אתם? בחרו את השם שלכם מהרשימה למטה.
+        </div>
       </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '2px solid var(--rtl-border)' }}>

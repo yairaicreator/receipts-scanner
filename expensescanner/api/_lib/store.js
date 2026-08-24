@@ -10,7 +10,9 @@
 // falls back to a JSON file under .data/ so `npm run dev` works with no
 // database. The file fallback is DEV ONLY: serverless filesystems are
 // ephemeral and per-instance, so a deployment without DATABASE_URL would
-// silently lose data.
+// silently lose data — and on Vercel specifically, `process.cwd()` isn't
+// even writable (only /tmp is), so the fallback doesn't degrade quietly
+// there, it throws on the first save. See `unconfiguredStore` below.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,6 +22,12 @@ const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 export const usingDatabase = Boolean(DATABASE_URL);
 
 const FILE_PATH = path.join(process.cwd(), '.data', 'expenses.json');
+
+// Vercel sets this in every deployment, preview or production — it's how we
+// tell "no DATABASE_URL because this is someone's local checkout" (fine, use
+// the file) apart from "no DATABASE_URL on a real deployment" (not fine,
+// there is nowhere durable to write; say so instead of failing confusingly).
+const isServerless = Boolean(process.env.VERCEL);
 
 /* ── Postgres ──────────────────────────────────────────────────────────── */
 
@@ -194,11 +202,32 @@ const fileStore = {
   },
 };
 
+/* ── Deployed with no database configured ─────────────────────────────── */
+
+// Reads come back empty rather than erroring, so the app still loads and
+// shows its normal "nothing filed yet" state instead of a crash — but a
+// write fails loudly with the actual reason, because a save that silently
+// went nowhere is worse than one that told the user why.
+const NOT_CONFIGURED_MESSAGE =
+  'לא הוגדר חיבור למסד נתונים בפרויקט הזה (DATABASE_URL) — אין לאן לשמור. יש להוסיף אותו תחת Settings → Environment Variables ב-Vercel ולפרוס מחדש.';
+
+const unconfiguredStore = {
+  async listPeople() {
+    return [];
+  },
+  async addExpense() {
+    throw new Error(NOT_CONFIGURED_MESSAGE);
+  },
+  async deleteExpense() {
+    throw new Error(NOT_CONFIGURED_MESSAGE);
+  },
+};
+
 export function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-const store = usingDatabase ? dbStore : fileStore;
+const store = usingDatabase ? dbStore : (isServerless ? unconfiguredStore : fileStore);
 
 export const listPeople = () => store.listPeople();
 export const addExpense = (args) => store.addExpense(args);

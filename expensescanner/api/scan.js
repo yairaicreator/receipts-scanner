@@ -35,8 +35,18 @@ export default async function handler(req, res) {
 
   const reader = pickReader();
   if (!reader.isConfigured()) {
+    // Deliberately in English and deliberately specific (not the app's usual
+    // Hebrew) — this is a setup problem for whoever manages the deployment,
+    // not a normal in-app message, and the exact state of the variable is
+    // what actually narrows down what's wrong with it.
+    const raw = process.env[reader.envVar];
+    const state = raw === undefined
+      ? 'is not set at all on this deployment'
+      : raw.trim() === ''
+        ? `is set but empty (length ${raw.length})`
+        : `is set (length ${raw.length}) but the server still didn't accept it as configured`;
     return sendJson(res, 503, {
-      error: `קריאת קבלות לא הוגדרה בשרת (חסר משתנה הסביבה ${reader.envVar}). נא למלא את השדות ידנית.`,
+      error: `Receipt scanning isn't available: the environment variable ${reader.envVar} ${state}. In Vercel: Settings -> Environment Variables -> edit ${reader.envVar}, make sure it holds the real key with Production checked -> Save -> then redeploy. You can still fill in the fields by hand below for now.`,
     });
   }
 

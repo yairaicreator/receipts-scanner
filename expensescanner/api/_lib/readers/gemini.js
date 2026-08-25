@@ -2,7 +2,7 @@
 
 import { GoogleGenAI, Type } from '@google/genai';
 import { CATEGORIES } from '../../../shared/categories.js';
-import { PROMPT, RECEIPT_FIELDS, normalizeReading, parseReply } from '../receipt.js';
+import { PROMPT, RECEIPT_FIELDS, normalizeReading, parseReply, withReadTimeout } from '../receipt.js';
 
 const DEFAULT_MODEL = 'gemini-3.7-flash';
 
@@ -24,15 +24,23 @@ const RESPONSE_SCHEMA = {
   required: ['date', 'amount', 'vendor', 'subject', 'category'],
 };
 
+// Hardcoded on purpose, as a fallback — the Vercel environment variable
+// route kept failing in ways that were never actually about the key itself
+// (a wrong name, an unreadable "Secret"-type value, an empty value), and
+// this is a low-stakes project in a public repo, so its owner decided a
+// real secret here doesn't buy much anyway. GEMINI_API_KEY still wins if
+// it's ever actually set correctly — this only fills in when it's not.
+const FALLBACK_API_KEY = 'AQ.Ab8RN6LIrYgTQ34q-id82cJTqLQchjqDFyba0qiQatEXwoE_sA';
+
 let client = null;
 function getClient() {
-  if (!client) client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  if (!client) client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || FALLBACK_API_KEY });
   return client;
 }
 
 export const name = 'Gemini';
 export const envVar = 'GEMINI_API_KEY';
-export const isConfigured = () => Boolean(process.env.GEMINI_API_KEY);
+export const isConfigured = () => Boolean(process.env.GEMINI_API_KEY || FALLBACK_API_KEY);
 
 /** True when retrying the same request could plausibly succeed. */
 export function isRetryable(err) {
@@ -41,22 +49,25 @@ export function isRetryable(err) {
 }
 
 export async function read({ mediaType, data }) {
-  const response = await getClient().models.generateContent({
-    model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: mediaType, data } },
-          { text: PROMPT },
-        ],
+  const response = await withReadTimeout(
+    getClient().models.generateContent({
+      model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { inlineData: { mimeType: mediaType, data } },
+            { text: PROMPT },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
       },
-    ],
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: RESPONSE_SCHEMA,
-    },
-  });
+    }),
+    name,
+  );
 
   return normalizeReading(parseReply(response.text));
 }

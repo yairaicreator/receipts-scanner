@@ -30,7 +30,7 @@ const RESPONSE_SCHEMA = {
 // this is a low-stakes project in a public repo, so its owner decided a
 // real secret here doesn't buy much anyway. GEMINI_API_KEY still wins if
 // it's ever actually set correctly — this only fills in when it's not.
-const API_KEY = 'AQ.Ab8RN6LIrYgTQ34q-id82cJTqLQchjqDFyba0qiQatEXwoE_sA';
+const API_KEY = 'AQ.Ab8RN6IRRipoheuDrOP4RcDoObt6i03cXDZI_7ie1PwByxmkCQ';
 
 let client = null;
 function getClient() {
@@ -46,6 +46,15 @@ export const isConfigured = () => Boolean(process.env.GEMINI_API_KEY || API_KEY)
 export function isRetryable(err) {
   const status = err?.status;
   return !(status >= 400 && status < 500 && status !== 429);
+}
+
+/**
+ * True when Gemini itself rejected the API key (as opposed to a receipt the
+ * model just couldn't read) — a deployment problem, not something a re-scan
+ * or hand-filled fields would fix.
+ */
+export function isAuthError(err) {
+  return err?.status === 401 || err?.status === 403;
 }
 
 export async function read({ mediaType, data }) {

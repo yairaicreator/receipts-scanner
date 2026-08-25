@@ -47,6 +47,17 @@ export default async function handler(req, res) {
     }
   }
 
+  if (reader.isAuthError?.(lastError)) {
+    // Same deliberately-English, deliberately-specific pattern as the
+    // isConfigured() branch above: this is the key itself being rejected by
+    // Gemini, not a receipt the model just couldn't make out, so a re-scan
+    // or hand-filled fields won't fix it — whoever manages the deployment
+    // needs to know the actual reason.
+    return sendJson(res, 502, {
+      error: `Receipt scanning is failing: ${reader.name} rejected the configured API key (HTTP ${lastError.status} — the key isn't valid or has been revoked). It needs to be replaced with a fresh key from https://aistudio.google.com/apikey. You can still fill in the fields by hand below for now.`,
+    });
+  }
+
   return fail(
     res,
     lastError,

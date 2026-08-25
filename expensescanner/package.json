@@ -10,7 +10,6 @@
     "start": "node scripts/server.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.72.0",
     "@google/genai": "^2.18.0",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.545.0",

@@ -4,36 +4,17 @@
 // photo. The prototype called the model directly from the page, which a real
 // deployment can't do without publishing the key.
 //
-// Gemini reads the receipt by default. Set SCAN_PROVIDER=claude to use Claude
-// instead — same prompt, same fields, so the two can be compared on real
-// receipts without touching anything else.
+// Gemini reads the receipt.
 
-import * as claude from './_lib/readers/claude.js';
 import * as gemini from './_lib/readers/gemini.js';
 import { parseDataUrl } from './_lib/receipt.js';
 import { fail, methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
-const READERS = { gemini, claude };
-const DEFAULT_PROVIDER = 'gemini';
-
-function pickReader() {
-  const requested = (process.env.SCAN_PROVIDER || '').trim().toLowerCase();
-  if (requested && READERS[requested]) return READERS[requested];
-  if (requested) {
-    console.warn(`Unknown SCAN_PROVIDER "${requested}"; falling back to ${DEFAULT_PROVIDER}.`);
-  }
-  // With no provider named, use whichever one actually has a key — so setting
-  // just one of the two is enough to get scanning working.
-  if (!requested && !READERS[DEFAULT_PROVIDER].isConfigured() && READERS.claude.isConfigured()) {
-    return READERS.claude;
-  }
-  return READERS[DEFAULT_PROVIDER];
-}
+const reader = gemini;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res, ['POST']);
 
-  const reader = pickReader();
   if (!reader.isConfigured()) {
     // Deliberately in English and deliberately specific (not the app's usual
     // Hebrew) — this is a setup problem for whoever manages the deployment,

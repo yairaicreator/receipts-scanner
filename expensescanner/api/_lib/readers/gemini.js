@@ -30,17 +30,17 @@ const RESPONSE_SCHEMA = {
 // this is a low-stakes project in a public repo, so its owner decided a
 // real secret here doesn't buy much anyway. GEMINI_API_KEY still wins if
 // it's ever actually set correctly — this only fills in when it's not.
-const FALLBACK_API_KEY = 'AQ.Ab8RN6LIrYgTQ34q-id82cJTqLQchjqDFyba0qiQatEXwoE_sA';
+const API_KEY = 'AQ.Ab8RN6LIrYgTQ34q-id82cJTqLQchjqDFyba0qiQatEXwoE_sA';
 
 let client = null;
 function getClient() {
-  if (!client) client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || FALLBACK_API_KEY });
+  if (!client) client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || API_KEY });
   return client;
 }
 
 export const name = 'Gemini';
 export const envVar = 'GEMINI_API_KEY';
-export const isConfigured = () => Boolean(process.env.GEMINI_API_KEY || FALLBACK_API_KEY);
+export const isConfigured = () => Boolean(process.env.GEMINI_API_KEY || API_KEY);
 
 /** True when retrying the same request could plausibly succeed. */
 export function isRetryable(err) {

@@ -10,7 +10,9 @@
 // falls back to a JSON file under .data/ so `npm run dev` works with no
 // database. The file fallback is DEV ONLY: serverless filesystems are
 // ephemeral and per-instance, so a deployment without DATABASE_URL would
-// silently lose data.
+// silently lose data — and on Vercel specifically, `process.cwd()` isn't
+// even writable (only /tmp is), so the fallback doesn't degrade quietly
+// there, it throws on the first save. See `unconfiguredStore` below.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,6 +22,12 @@ const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 export const usingDatabase = Boolean(DATABASE_URL);
 
 const FILE_PATH = path.join(process.cwd(), '.data', 'expenses.json');
+
+// Vercel sets this in every deployment, preview or production — it's how we
+// tell "no DATABASE_URL because this is someone's local checkout" (fine, use
+// the file) apart from "no DATABASE_URL on a real deployment" (not fine,
+// there is nowhere durable to write; say so instead of failing confusingly).
+const isServerless = Boolean(process.env.VERCEL);
 
 /* ── Postgres ──────────────────────────────────────────────────────────── */
 
@@ -97,6 +105,21 @@ function rowsToPeople(peopleRows, expenseRows) {
   return [...byId.values()];
 }
 
+// Insert-or-get in one statement so two phones settling on the same new name
+// at the same moment can't create two people records. `client` is either the
+// pool directly (a standalone join) or a connection already inside a
+// transaction (a join folded into a save).
+async function upsertPersonRow(client, personName) {
+  const key = normalizeName(personName);
+  const upsert = await client.query(
+    `INSERT INTO people (id, name, name_key) VALUES ($1, $2, $3)
+     ON CONFLICT (name_key) DO UPDATE SET name = people.name
+     RETURNING id`,
+    [newId(), personName.trim(), key],
+  );
+  return upsert.rows[0].id;
+}
+
 const dbStore = {
   async listPeople() {
     await ensureSchema();
@@ -114,16 +137,7 @@ const dbStore = {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const key = normalizeName(personName);
-      // Insert-or-get in one statement so two phones saving the same new name
-      // at the same moment can't create two people records.
-      const upsert = await client.query(
-        `INSERT INTO people (id, name, name_key) VALUES ($1, $2, $3)
-         ON CONFLICT (name_key) DO UPDATE SET name = people.name
-         RETURNING id`,
-        [newId(), personName.trim(), key],
-      );
-      const personId = upsert.rows[0].id;
+      const personId = await upsertPersonRow(client, personName);
       await client.query(
         `INSERT INTO expenses (id, person_id, date, category, amount, vendor, subject)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -137,6 +151,15 @@ const dbStore = {
     } finally {
       client.release();
     }
+  },
+
+  // Registers a person the moment they join, with no receipt yet — so the
+  // staff list shows everyone who's signed up, not just whoever happens to
+  // have scanned something first.
+  async addPerson(personName) {
+    await ensureSchema();
+    const pool = await getPool();
+    return upsertPersonRow(pool, personName);
   },
 
   async deleteExpense(expenseId) {
@@ -162,6 +185,16 @@ async function writeFileStore(people) {
   await fs.writeFile(FILE_PATH, JSON.stringify(people, null, 2));
 }
 
+function findOrCreatePerson(people, personName) {
+  const key = normalizeName(personName);
+  let person = people.find((p) => normalizeName(p.name) === key);
+  if (!person) {
+    person = { id: newId(), name: personName.trim(), expenses: [] };
+    people.push(person);
+  }
+  return person;
+}
+
 const fileStore = {
   async listPeople() {
     return readFileStore();
@@ -169,14 +202,16 @@ const fileStore = {
 
   async addExpense({ personName, expense }) {
     const people = await readFileStore();
-    const key = normalizeName(personName);
-    let person = people.find((p) => normalizeName(p.name) === key);
-    if (!person) {
-      person = { id: newId(), name: personName.trim(), expenses: [] };
-      people.push(person);
-    }
+    const person = findOrCreatePerson(people, personName);
     person.expenses.push(expense);
     person.expenses.sort((a, b) => a.date.localeCompare(b.date));
+    await writeFileStore(people);
+    return person.id;
+  },
+
+  async addPerson(personName) {
+    const people = await readFileStore();
+    const person = findOrCreatePerson(people, personName);
     await writeFileStore(people);
     return person.id;
   },
@@ -194,14 +229,51 @@ const fileStore = {
   },
 };
 
+/* ── Deployed with no database configured ─────────────────────────────── */
+
+// Reads come back empty rather than erroring, so the app still loads and
+// shows its normal "nothing filed yet" state instead of a crash — but a
+// write fails loudly with the actual reason, because a save that silently
+// went nowhere is worse than one that told the user why. In English and
+// specific, matching scan.js's setup-error messages: this is a deployment
+// problem, not a normal in-app message, and it leads with the plain-language
+// reason rather than a set of steps to follow inside the error text.
+const NOT_CONFIGURED_MESSAGE =
+  'Nothing can be saved: no database is connected to this deployment. Technical detail: DATABASE_URL is not set.';
+
+// `fail()` in http.js deliberately never sends a raw error's own message to
+// the browser (that's how a stack trace or a connection string stays off
+// someone's phone) — it only forwards `err.userMessage` when a throw site
+// has explicitly opted a specific, pre-written message into that. This is
+// one of those: safe to show as-is, not a leak.
+function configError() {
+  return Object.assign(new Error(NOT_CONFIGURED_MESSAGE), { userMessage: NOT_CONFIGURED_MESSAGE });
+}
+
+const unconfiguredStore = {
+  async listPeople() {
+    return [];
+  },
+  async addExpense() {
+    throw configError();
+  },
+  async addPerson() {
+    throw configError();
+  },
+  async deleteExpense() {
+    throw configError();
+  },
+};
+
 export function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-const store = usingDatabase ? dbStore : fileStore;
+const store = usingDatabase ? dbStore : (isServerless ? unconfiguredStore : fileStore);
 
 export const listPeople = () => store.listPeople();
 export const addExpense = (args) => store.addExpense(args);
+export const addPerson = (name) => store.addPerson(name);
 export const deleteExpense = (id) => store.deleteExpense(id);
 
 export async function getPerson(personId) {

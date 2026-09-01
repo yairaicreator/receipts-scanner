@@ -14,6 +14,17 @@ export function fetchPeople() {
   return request('/api/people').then((body) => body.people);
 }
 
+/** Registers a name at first launch, before there's any receipt to attach it
+ *  to — returns the whole store plus the person it landed on, same shape as
+ *  saveExpense, so joining shows up in the staff list right away. */
+export function joinPerson(name) {
+  return request('/api/people', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}
+
 /** Appends one receipt; returns the whole store plus the person it landed on. */
 export function saveExpense(entry) {
   return request('/api/expenses', {

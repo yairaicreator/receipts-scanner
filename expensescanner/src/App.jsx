@@ -85,15 +85,42 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function joinNow(name) {
+  // Registers the name in the shared store the moment someone joins, not
+  // just on this device — otherwise the staff list only ever shows whoever
+  // happens to have scanned a receipt first, not everyone who's signed up.
+  async function joinNow(name) {
     persistUserName(name);
     setUserName(name);
     bootedRef.current = true;
-    if (people) {
-      const mine = people.find((p) => normalizeName(p.name) === normalizeName(name));
+    try {
+      const { personId, people: updated } = await api.joinPerson(name);
+      setPeople(updated);
+      setSelectedPersonId(personId);
+      setScreen('person');
+    } catch (err) {
+      // The name still works locally even if the shared list couldn't be
+      // reached — falling back to the same local match the old flow used.
+      setError(err.message);
+      const mine = people?.find((p) => normalizeName(p.name) === normalizeName(name));
       if (mine) { setSelectedPersonId(mine.id); setScreen('person'); return; }
+      setScreen('home');
     }
-    setScreen('home');
+  }
+
+  // Picking anyone from the staff list makes them "you" on this device from
+  // now on — not just a one-time look at their page. That's how someone who
+  // joined under the wrong name, or opened the app on a second device, gets
+  // to attach themselves to their existing record instead of starting a new
+  // one: come back to this list (the back arrow on a person's page returns
+  // here) and choose the right name.
+  function choosePerson(id) {
+    const match = people?.find((p) => p.id === id);
+    if (match) {
+      persistUserName(match.name);
+      setUserName(match.name);
+    }
+    setSelectedPersonId(id);
+    setScreen('person');
   }
 
   const cards = people ? toPersonCards(people) : [];
@@ -302,7 +329,7 @@ export default function App() {
           peopleCount={people.length}
           receiptCount={receiptCount}
           lastScan={lastScan}
-          onOpenPerson={(id) => { setSelectedPersonId(id); setScreen('person'); }}
+          onOpenPerson={choosePerson}
           onNewScan={() => openScan()}
         />
       )}

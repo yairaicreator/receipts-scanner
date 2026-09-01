@@ -336,7 +336,15 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'welcome' && <WelcomeScreen onJoin={joinNow} />}
+      {screen === 'welcome' && (
+        <WelcomeScreen
+          onJoin={joinNow}
+          // Coming back from Home to add a second person on this same
+          // device (a shared computer, say) — cancellable. True first
+          // launch has nowhere to go back to yet, so no button then.
+          onBack={userName ? () => setScreen('home') : undefined}
+        />
+      )}
 
       {screen === 'home' && (
         <HomeScreen
@@ -347,6 +355,7 @@ export default function App() {
           lastScan={lastScan}
           onOpenPerson={choosePerson}
           onNewScan={() => openScan()}
+          onAddPerson={() => setScreen('welcome')}
         />
       )}
 

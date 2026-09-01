@@ -1,8 +1,11 @@
-import { ArrowLeft, Camera, Receipt } from 'lucide-react';
+import { ArrowLeft, Camera, Receipt, UserPlus } from 'lucide-react';
 
 /** The staff list: a numbered row per person, a strip showing the shape of
- *  their spend by category, and the running totals across everyone at top. */
-export default function HomeScreen({ userName, people, peopleCount, receiptCount, lastScan, onOpenPerson, onNewScan }) {
+ *  their spend by category, and the running totals across everyone at top.
+ *  "הצטרפות בשם חדש" stays visible whether the list is empty or long — it's
+ *  how a second, third, tenth person on a shared device gets their own row
+ *  and their own record, not just whoever joined here first. */
+export default function HomeScreen({ userName, people, peopleCount, receiptCount, lastScan, onOpenPerson, onNewScan, onAddPerson }) {
   return (
     <>
       <header style={{ background: 'var(--color-accent)', color: '#fff', padding: '22px 20px 18px' }}>
@@ -16,7 +19,7 @@ export default function HomeScreen({ userName, people, peopleCount, receiptCount
           שלום {userName} — צלמו קבלה והיא תתויק אוטומטית.
         </div>
         <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, maxWidth: '26ch' }}>
-          לא אתם? בחרו את השם שלכם מהרשימה למטה.
+          לא אתם? בחרו את השם שלכם מהרשימה למטה, או הצטרפו בשם חדש.
         </div>
       </header>
 
@@ -36,6 +39,22 @@ export default function HomeScreen({ userName, people, peopleCount, receiptCount
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 24 }}>
+        <div
+          role="button"
+          tabIndex={0}
+          className="hover-row"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            borderBottom: '2px dashed var(--rtl-border-2)', padding: '16px 20px', cursor: 'pointer',
+            color: 'var(--color-accent)',
+          }}
+          onClick={onAddPerson}
+          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onAddPerson(); } }}
+        >
+          <UserPlus size={20} aria-hidden="true" />
+          <div style={{ font: '700 15px/1 var(--font-heading)' }}>הצטרפות בשם חדש</div>
+        </div>
+
         {people.length > 0 ? (
           people.map((person) => (
             <div

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-/** First launch on this device: write your name once, every receipt you
- *  scan files itself under it from then on. */
-export default function WelcomeScreen({ onJoin }) {
+/** Write a name once, every receipt scanned under it files itself there from
+ *  then on. Reached two ways: true first launch on a device (no way back —
+ *  there's nowhere else yet), or "join with a new name" from the staff list
+ *  on a device someone already uses (onBack lets that one cancel). */
+export default function WelcomeScreen({ onJoin, onBack }) {
   const [name, setName] = useState('');
   const canJoin = name.trim().length > 1;
 
@@ -14,7 +16,22 @@ export default function WelcomeScreen({ onJoin }) {
 
   return (
     <>
-      <div style={{ background: 'var(--color-accent)', color: '#fff', padding: '40px 24px 34px' }}>
+      <div style={{ background: 'var(--color-accent)', color: '#fff', padding: '40px 24px 34px', position: 'relative' }}>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="חזרה"
+            style={{
+              position: 'absolute', top: 16, insetInlineStart: 16,
+              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: '2px solid rgba(255,255,255,0.35)', borderRadius: 10,
+              color: '#fff', cursor: 'pointer',
+            }}
+          >
+            <ArrowRight size={18} aria-hidden="true" />
+          </button>
+        )}
         <div style={{ font: '700 11px/1 var(--font-heading)', letterSpacing: '.04em', opacity: 0.8 }}>
           קופה קטנה
         </div>

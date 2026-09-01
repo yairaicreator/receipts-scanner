@@ -4,39 +4,30 @@
 // photo. The prototype called the model directly from the page, which a real
 // deployment can't do without publishing the key.
 //
-// Gemini reads the receipt by default. Set SCAN_PROVIDER=claude to use Claude
-// instead — same prompt, same fields, so the two can be compared on real
-// receipts without touching anything else.
+// Gemini reads the receipt.
 
-import * as claude from './_lib/readers/claude.js';
 import * as gemini from './_lib/readers/gemini.js';
 import { parseDataUrl } from './_lib/receipt.js';
 import { fail, methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
-const READERS = { gemini, claude };
-const DEFAULT_PROVIDER = 'gemini';
-
-function pickReader() {
-  const requested = (process.env.SCAN_PROVIDER || '').trim().toLowerCase();
-  if (requested && READERS[requested]) return READERS[requested];
-  if (requested) {
-    console.warn(`Unknown SCAN_PROVIDER "${requested}"; falling back to ${DEFAULT_PROVIDER}.`);
-  }
-  // With no provider named, use whichever one actually has a key — so setting
-  // just one of the two is enough to get scanning working.
-  if (!requested && !READERS[DEFAULT_PROVIDER].isConfigured() && READERS.claude.isConfigured()) {
-    return READERS.claude;
-  }
-  return READERS[DEFAULT_PROVIDER];
-}
+const reader = gemini;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res, ['POST']);
 
-  const reader = pickReader();
   if (!reader.isConfigured()) {
+    // Deliberately in English and deliberately specific (not the app's usual
+    // Hebrew) — this is a setup problem for whoever manages the deployment,
+    // not a normal in-app message, and the exact state of the variable is
+    // what actually narrows down what's wrong with it.
+    const raw = process.env[reader.envVar];
+    const state = raw === undefined
+      ? 'is not set at all on this deployment'
+      : raw.trim() === ''
+        ? `is set but empty (length ${raw.length})`
+        : `is set (length ${raw.length}) but the server still didn't accept it as configured`;
     return sendJson(res, 503, {
-      error: `קריאת קבלות לא הוגדרה בשרת (חסר משתנה הסביבה ${reader.envVar}). נא למלא את השדות ידנית.`,
+      error: `Receipt scanning isn't available: the environment variable ${reader.envVar} ${state}. In Vercel: Settings -> Environment Variables -> edit ${reader.envVar}, make sure it holds the real key with Production checked -> Save -> then redeploy. You can still fill in the fields by hand below for now.`,
     });
   }
 
@@ -54,6 +45,17 @@ export default async function handler(req, res) {
       lastError = err;
       if (!reader.isRetryable(err)) break;
     }
+  }
+
+  if (reader.isAuthError?.(lastError)) {
+    // Same deliberately-English, deliberately-specific pattern as the
+    // isConfigured() branch above: this is the key itself being rejected by
+    // Gemini, not a receipt the model just couldn't make out, so a re-scan
+    // or hand-filled fields won't fix it — whoever manages the deployment
+    // needs to know the actual reason.
+    return sendJson(res, 502, {
+      error: `Receipt scanning is failing: ${reader.name} rejected the configured API key (HTTP ${lastError.status} — the key isn't valid or has been revoked). It needs to be replaced with a fresh key from https://aistudio.google.com/apikey. You can still fill in the fields by hand below for now.`,
+    });
   }
 
   return fail(

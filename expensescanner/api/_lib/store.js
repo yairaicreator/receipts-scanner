@@ -234,34 +234,22 @@ const fileStore = {
 // Reads come back empty rather than erroring, so the app still loads and
 // shows its normal "nothing filed yet" state instead of a crash — but a
 // write fails loudly with the actual reason, because a save that silently
-// went nowhere is worse than one that told the user why. In English and
-// specific, matching scan.js's setup-error messages: this is a deployment
-// problem, not a normal in-app message, and it leads with the plain-language
-// reason rather than a set of steps to follow inside the error text.
+// went nowhere is worse than one that told the user why.
 const NOT_CONFIGURED_MESSAGE =
-  'Nothing can be saved: no database is connected to this deployment. Technical detail: DATABASE_URL is not set.';
-
-// `fail()` in http.js deliberately never sends a raw error's own message to
-// the browser (that's how a stack trace or a connection string stays off
-// someone's phone) — it only forwards `err.userMessage` when a throw site
-// has explicitly opted a specific, pre-written message into that. This is
-// one of those: safe to show as-is, not a leak.
-function configError() {
-  return Object.assign(new Error(NOT_CONFIGURED_MESSAGE), { userMessage: NOT_CONFIGURED_MESSAGE });
-}
+  'לא הוגדר חיבור למסד נתונים בפרויקט הזה (DATABASE_URL) — אין לאן לשמור. יש להוסיף אותו תחת Settings → Environment Variables ב-Vercel ולפרוס מחדש.';
 
 const unconfiguredStore = {
   async listPeople() {
     return [];
   },
   async addExpense() {
-    throw configError();
+    throw new Error(NOT_CONFIGURED_MESSAGE);
   },
   async addPerson() {
-    throw configError();
+    throw new Error(NOT_CONFIGURED_MESSAGE);
   },
   async deleteExpense() {
-    throw configError();
+    throw new Error(NOT_CONFIGURED_MESSAGE);
   },
 };
 

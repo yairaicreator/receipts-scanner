@@ -123,6 +123,22 @@ export default function App() {
     setScreen('person');
   }
 
+  // Picking anyone from the staff list makes them "you" on this device from
+  // now on — not just a one-time look at their page. That's how someone who
+  // joined under the wrong name, or opened the app on a second device, gets
+  // to attach themselves to their existing record instead of starting a new
+  // one: come back to this list (the back arrow on a person's page returns
+  // here) and choose the right name.
+  function choosePerson(id) {
+    const match = people?.find((p) => p.id === id);
+    if (match) {
+      persistUserName(match.name);
+      setUserName(match.name);
+    }
+    setSelectedPersonId(id);
+    setScreen('person');
+  }
+
   const cards = people ? toPersonCards(people) : [];
   const selectedPersonRaw = people?.find((p) => p.id === selectedPersonId) || null;
   const selectedPerson = selectedPersonRaw ? toPersonView(selectedPersonRaw) : null;

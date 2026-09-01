@@ -34,7 +34,7 @@ chats/                 the design conversation it came out of
 
 | Endpoint | File | Does |
 |---|---|---|
-| `POST /api/scan` | `api/scan.js` | Reads a receipt photo (Gemini by default) |
+| `POST /api/scan` | `api/scan.js` | Reads a receipt photo (Gemini) |
 | `GET /api/people` | `api/people.js` | Everyone and their receipts |
 | `POST /api/expenses` | `api/expenses.js` | Appends one receipt, matched to a person by name |
 | `DELETE /api/expenses?id=` | `api/expenses.js` | Removes one receipt |
@@ -46,27 +46,14 @@ chats/                 the design conversation it came out of
 |---|---|---|
 | `GEMINI_API_KEY` | to read receipts | Server-side key for the vision call. Without it the app still runs — the scan step says so and the fields are filled in by hand. |
 | `DATABASE_URL` | to share data | Postgres connection string. Without it a JSON file under `.data/` is used, which is **local development only** — see below. |
-| `SCAN_PROVIDER` | no | `gemini` (default) or `claude`. |
-| `GEMINI_MODEL` / `ANTHROPIC_MODEL` | no | Default to `gemini-3.7-flash` / `claude-opus-5`. |
-| `ANTHROPIC_API_KEY` | only for Claude | Needed when `SCAN_PROVIDER=claude`. |
+| `GEMINI_MODEL` | no | Defaults to `gemini-3.7-flash`. |
 
-Get a Gemini key at <https://aistudio.google.com/apikey> (Claude keys come from
-<https://console.anthropic.com/settings/keys>). Any Postgres works for
-`DATABASE_URL` — Vercel Postgres, Neon, and Supabase all hand you one, and the
-tables are created automatically on the first request.
+Get a Gemini key at <https://aistudio.google.com/apikey>. Any Postgres works
+for `DATABASE_URL` — Vercel Postgres, Neon, and Supabase all hand you one, and
+the tables are created automatically on the first request.
 
-### Switching who reads the receipts
-
-Both readers use the same prompt and return the same four fields, so you can
-compare them on your own receipts by flipping one variable:
-
-```bash
-SCAN_PROVIDER=gemini   # default — gemini-3.7-flash
-SCAN_PROVIDER=claude   # claude-opus-5, needs ANTHROPIC_API_KEY
-```
-
-The prompt itself lives in `api/_lib/receipt.js`, in one place, so tightening
-it improves both. Each reader is about 50 lines in `api/_lib/readers/`.
+The prompt lives in `api/_lib/receipt.js`, and the reader itself is about 50
+lines in `api/_lib/readers/gemini.js`.
 
 ## Run it locally
 
@@ -105,8 +92,8 @@ whether the review form asks for the vendor.
 ## What changed from the prototype, and why
 
 - **The AI call moved to the server.** The prototype called the model from the
-  page, which a deployed site can't do without publishing the key. Gemini reads
-  the receipts; Claude is one environment variable away (see above).
+  page, which a deployed site can't do without publishing the key. Gemini
+  reads the receipts server-side now.
 - **Shared storage replaced `localStorage`.** Everyone's phone now sees the
   same records; before, each browser had its own copy.
 - **The Excel file is built on the server** with live `SUM()` formulas, so the

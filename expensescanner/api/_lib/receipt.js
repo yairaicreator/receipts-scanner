@@ -77,6 +77,31 @@ export function normalizeReading(parsed) {
   };
 }
 
+const READ_TIMEOUT_MS = 20_000;
+
+/** Thrown when a reader doesn't answer within the read timeout. */
+export class ReadTimeoutError extends Error {
+  constructor(readerName, ms) {
+    super(`${readerName} did not respond within ${ms / 1000}s.`);
+    this.name = 'ReadTimeoutError';
+  }
+}
+
+/**
+ * Cap one reader call at `ms` so a slow model call fails fast with a clear
+ * message instead of the whole function (60s `maxDuration` in vercel.json)
+ * getting killed by Vercel's platform gateway with a bare, useless 504.
+ */
+export function withReadTimeout(promise, readerName, ms = READ_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new ReadTimeoutError(readerName, ms)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 /** Split and check the browser's data URL. */
 export function parseDataUrl(image) {
   const match = /^data:([\w./+-]+);base64,(.+)$/s.exec(String(image || ''));
